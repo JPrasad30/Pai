@@ -1,0 +1,688 @@
+Practical No. 1
+Data Pre-processing and Exploration
+(A).	Load a CSV dataset. Handle missing values, inconsistent formatting, and outliers. Here are the general steps for cleaning a dataset:
+
+
+Code:
+import pandas as pd import numpy as np from scipy import stats
+
+df = pd.read_csv('titanic.csv') 
+
+print(df.head())
+
+df['Age'] = df['Age'].fillna(df['Age'].mean())
+df['Fare'] = df['Fare'].fillna(df['Fare'].mean())
+df['Embarked'] = df['Embarked'].fillna(df['Embarked'].mode()[0])
+df['Cabin'] = df['Cabin'].fillna('Unknown') # Fill Cabin with a default string if missing
+df['Sex'] = df['Sex'].str.lower()
+
+df['Embarked'] = df['Embarked'].str.strip().str.upper()
+numeric_columns = ['Age', 'Fare']
+z_scores = np.abs(stats.zscore(df[numeric_columns]))
+
+threshold = 3
+outliers = (z_scores > threshold)
+
+df_no_outliers = df[(z_scores < threshold).all(axis=1)]
+print("\nCleaned Data (after handling missing values, inconsistent formatting, and outliers):") print(df_no_outliers.head())
+df_no_outliers.to_csv('cleaned_titanic_data.csv', index=False) Output:
+ 
+ 
+
+(B).	Load a dataset, calculate descriptive summary statistics, create visualizations using different graphs, and identify potential features and target variables
+Note: Explore Univariate and Bivariate graphs (Matplotlib) and Seaborn for visualization.
+
+Code:
+import matplotlib.pyplot as plt import seaborn as sns
+
+df = sns.load_dataset("iris")
+
+print(df.describe())
+plt.figure(figsize=(8, 6))
+sns.histplot(df['sepal_length'], kde=True, bins=20, color='blue') plt.title('Distribution of Sepal Length')
+plt.xlabel('Sepal Length (cm)') plt.ylabel('Frequency') plt.show()
+
+plt.figure(figsize=(8, 6)) sns.boxplot(x=df['petal_length'], color='green') plt.title('Boxplot of Petal Length') plt.xlabel('Petal Length (cm)')
+plt.show()
+
+plt.figure(figsize=(8, 6))
+sns.kdeplot(df['sepal_width'], shade=True, color='red') plt.title('Density Plot of Sepal Width') plt.xlabel('Sepal Width (cm)')
+plt.ylabel('Density') plt.show() 
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x='sepal_length', y='sepal_width', data=df, hue='species') plt.title('Sepal Length vs Sepal Width')
+plt.xlabel('Sepal Length (cm)') plt.ylabel('Sepal Width (cm)') plt.show()
+sns.pairplot(df, hue='species') plt.show()
+corr_matrix = df.corr() plt.figure(figsize=(8, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', linewidths=0.5) plt.title('Correlation Heatmap of Numerical Features')
+plt.show()
+
+Output:
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+(C).	Create or Explore datasets to use all pre-processing routines like label encoding, scaling, and binarization.
+
+Solution:
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler, Binarizer
+
+data = {
+"Numerical_Column": [10, 20, 30, 40, 50],
+"Categorical_Column": ["Low", "Medium", "High", "Medium", "Low"], "Binary_Column": [1, 0, 1, 0, 1]
+}
+
+# Convert to a DataFrame df = pd.DataFrame(data)
+
+df.loc[1, "Numerical_Column"] = np.nan
+df["Numerical_Column"].fillna(df["Numerical_Column"].mean(), inplace=True)
+
+label_encoder = LabelEncoder()
+df["Categorical_Column_Encoded"] = label_encoder.fit_transform(df["Categorical_Column"])
+
+scaler = StandardScaler()
+df["Numerical_Scaled"] = scaler.fit_transform(df[["Numerical_Column"]])
+min_max_scaler = MinMaxScaler()
+df["Numerical_MinMax_Scaled"] = min_max_scaler.fit_transform(df[["Numerical_Column"]])
+
+binarizer = Binarizer(threshold=25)
+df["Numerical_Binarized"] = binarizer.fit_transform(df[["Numerical_Column"]])
+
+print(df)
+
+Output:
+
+ 
+Practical No. 2
+Testing Hypothesis
+(A).	Implement and demonstrate the FIND-S algorithm for finding the most specific hypothesis based on a given set of training data samples. Read the training data from a. CSV file and generate the final specific hypothesis. (Create your dataset)
+Dataset:
+
+Feature1	Feature2	Feature3	Class
+Sunny	Hot	High	Yes
+Sunny	Hot	Low	Yes
+Overcast	Hot	High	Yes
+Rainy	Mild	High	No
+Rainy	Cool	High	No
+Overcast	Mild	High	Yes
+Sunny	Cool	High	No
+
+Code:
+import pandas as pd
+# Step 1: Create a simple dataset and save it to a CSV file data = {
+"Sky": ["Sunny", "Sunny", "Rainy", "Sunny", "Sunny"],
+"AirTemp": ["Warm", "Warm", "Cold", "Warm", "Warm"],
+"Humidity": ["Normal", "High", "High", "High", "Normal"],
+"Wind": ["Strong", "Strong", "Strong", "Strong", "Strong"],
+"Water": ["Warm", "Warm", "Warm", "Cool", "Warm"],
+"Forecast": ["Same", "Same", "Change", "Same", "Same"],
+"EnjoySport": ["Yes", "Yes", "No", "Yes", "Yes"]
+}
+
+df = pd.DataFrame(data)
+ 
+df.to_csv("training_data.csv", index=False)
+
+training_data = pd.read_csv("training_data.csv")
+
+def find_s_algorithm(data):
+
+features = data.iloc[:, :-1].values target = data.iloc[:, -1].values	
+hypothesis = ["ϕ"] * features.shape[1] # Start with the most specific hypothesis
+
+for i, row in enumerate(features):
+if target[i] == "Yes": # Consider only positive examples for j in range(len(hypothesis)):
+if hypothesis[j] == "ϕ": # Update if still specific hypothesis[j] = row[j]
+elif hypothesis[j] != row[j]: # Generalize if mismatch hypothesis[j] = "?"
+return hypothesis
+
+final_hypothesis = find_s_algorithm(training_data)
+print("Final Specific Hypothesis:", final_hypothesis)
+
+ 
+Output:
+
+ 
+Practical No. 3
+Linear Models
+(A)	Simple Linear Regression
+Fit a linear regression model on a dataset. Interpret coefficients, make predictions, and evaluate performance using metrics like R-squared and MSE
+
+Code:
+import pandas as pd import numpy as np
+import matplotlib.pyplot as plt import seaborn as sns
+from sklearn.model_selection import train_test_split from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score from sklearn.datasets import load_diabetes
+
+data = load_diabetes()
+df = pd.DataFrame(data.data, columns=data.feature_names) df['target'] = data.target
+print(df.head())
+X = df.drop('target', axis=1)
+y = df['target']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) 
+model = LinearRegression()model.fit(X_train, y_train) 
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+ 
+print(f"Mean Squared Error: {mse}") print(f"R2 Score: {r2}")
+plt.figure(figsize=(8, 6)) plt.scatter(y_test, y_pred)
+plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--') plt.xlabel("Actual")
+plt.ylabel("Predicted") plt.title("Actual vs Predicted Values") plt.show()
+
+Output:
+
+
+ 
+(B).	Multiple Linear Regression
+Extend linear regression to multiple features. Handle feature selection and potential multicollinearity.
+
+Code:
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Lasso from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
+from statsmodels.stats.outliers_influence import variance_inflation_factor from statsmodels.tools.tools import add_constant
+from sklearn.datasets import load_diabetes
+
+diabetes = load_diabetes()
+
+df = pd.DataFrame(diabetes.data, columns=diabetes.feature_names)
+
+df['PROGRESSION'] = diabetes.target
+ 
+print("Dataset Overview:") print(df.head(), "\n")
+
+corr_matrix = df.corr()
+plt.figure(figsize=(10, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5) plt.title("Correlation Matrix")
+plt.show()
+
+X = df.drop(columns=['PROGRESSION'])
+X_with_const = add_constant(X) # Add constant to the features vif_data = pd.DataFrame()
+vif_data["Feature"] = X_with_const.columns
+vif_data["VIF"] = [variance_inflation_factor(X_with_const.values, i) for i in range(X_with_const.shape[1])]
+
+print("\nVariance Inflation Factor (VIF):") print(vif_data, "\n")
+
+X_selected = X.drop(columns=['s5', 's4']) 
+
+X = X_selected
+y = df['PROGRESSION']
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+intercept = model.intercept_
+coefficients = model.coef_
+
+print(f"\nIntercept: {intercept}") print(f"Coefficients: {coefficients}\n")
+ 
+y_pred = model.predict(X_test)
+
+comparison_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred}) print("Actual vs Predicted Progression (for the first 5 records):") print(comparison_df.head(), "\n")
+
+r2 = r2_score(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+
+print(f"R-squared: {r2}")
+print(f"Mean Squared Error (MSE): {mse}\n")
+
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred, color='blue')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', linestyle='--') plt.title('Actual vs Predicted Progression')
+plt.xlabel('Actual Progression') plt.ylabel('Predicted Progression') plt.show()
+
+lasso = Lasso(alpha=0.1) # Regularization strength (alpha) lasso.fit(X_train, y_train)
+
+lasso_coefficients = lasso.coef_
+print(f"Lasso Coefficients: {lasso_coefficients}\n")
+
+y_pred_lasso = lasso.predict(X_test)
+
+r2_lasso = r2_score(y_test, y_pred_lasso)
+mse_lasso = mean_squared_error(y_test, y_pred_lasso)
+
+print(f"Lasso R-squared: {r2_lasso}")
+print(f"Lasso Mean Squared Error (MSE): {mse_lasso}\n")
+
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred_lasso, color='green')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', linestyle='--') plt.title('Actual vs Predicted Progression (Lasso Regression)')
+plt.xlabel('Actual Progression')
+ 
+plt.ylabel('Predicted Progression (Lasso)') plt.show()
+
+
+
+ 
+
+Output:
+
+ 
+
+ 
+
+ 
+ 
+
+ 
+
+ 
+(C)	.
+Code:
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Ridge, Lasso, ElasticNet from sklearn.metrics import mean_squared_error, r2_score 
+X, y = make_regression(n_samples=100, n_features=10, noise=0.1, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+ridge = Ridge(alpha=1.0)
+lasso = Lasso(alpha=0.1)
+elastic_net = ElasticNet(alpha=0.1, l1_ratio=0.5) # l1_ratio = 0.5 is a good start for mixing L1 and L2
+
+ridge.fit(X_train, y_train) lasso.fit(X_train, y_train) elastic_net.fit(X_train, y_train) 
+y_pred_ridge = ridge.predict(X_test) y_pred_lasso = lasso.predict(X_test) y_pred_elastic_net = elastic_net.predict(X_test)
+# Step 4: Evaluate the models using MSE and R² score mse_ridge = mean_squared_error(y_test, y_pred_ridge) mse_lasso = mean_squared_error(y_test, y_pred_lasso)
+mse_elastic_net = mean_squared_error(y_test, y_pred_elastic_net)
+ 
+r2_ridge = r2_score(y_test, y_pred_ridge) r2_lasso = r2_score(y_test, y_pred_lasso)
+r2_elastic_net = r2_score(y_test, y_pred_elastic_net)
+
+print(f"Ridge Regression MSE: {mse_ridge:.4f}, R²: {r2_ridge:.4f}") print(f"Lasso Regression MSE: {mse_lasso:.4f}, R²: {r2_lasso:.4f}")
+print(f"ElasticNet Regression MSE: {mse_elastic_net:.4f}, R²: {r2_elastic_net:.4f}")
+
+plt.figure(figsize=(10, 6))
+plt.plot(y_test, label='True values', linestyle='-', marker='o', markersize=5) plt.plot(y_pred_ridge, label='Ridge predictions', linestyle='-', marker='x', markersize=5) plt.plot(y_pred_lasso, label='Lasso predictions', linestyle='-', marker='x', markersize=5)
+plt.plot(y_pred_elastic_net, label='ElasticNet predictions', linestyle='-', marker='x', markersize=5) plt.legend()
+plt.title('Regression Model Predictions vs True Values') plt.show()
+
+Output:
+
+
+
+ 
+Practical No. 4
+Logistic Regression
+(A).	Perform binary classification using logistic regression. Calculate accuracy, precision, recall, and understand the ROC curve.
+
+
+import numpy as np import pandas as pd
+from sklearn.model_selection import train_test_split from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_curve, auc import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.datasets import load_iris
+iris = load_iris()
+
+X = iris.data[iris.target != 2] # Features
+y = iris.target[iris.target != 2] # Target variable
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize the Logistic Regression model model = LogisticRegression()
+# Train the model model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+ 
+y_prob = model.predict_proba(X_test)[:, 1]
+fpr, tpr, thresholds = roc_curve(y_test, y_prob)
+
+roc_auc = auc(fpr, tpr)
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (area = {roc_auc:.2f})') plt.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--') # Diagonal line (no skill) plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve') plt.legend(loc='lower right')
+plt.show()
+
+Output:
+
+ 
+
+ 
+
+
+ 
+(B).	Implement and demonstrate k-nearest Neighbor algorithm. Read the training data from a
+.CSV file and build the model to classify a test sample. Print both correct and wrong predictions.
+
+1.	.
+Code:
+import pandas as pd
+from sklearn.model_selection import train_test_split from sklearn.neighbors import KNeighborsClassifier from sklearn.metrics import accuracy_score
+. data = pd.read_csv('data.csv') 
+X = data.drop(columns=['class']) y = data['class'] 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+k = 3 # You can change k to any number for the number of neighbors knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+for i in range(len(X_test)):
+sample = X_test.iloc[i]
+ 
+true_label = y_test.iloc[i] predicted_label = y_pred[i]
+if true_label == predicted_label:
+print(f"Correct: Sample {i+1} -> Features: {sample.values} | True label: {true_label} | Predicted:
+{predicted_label}") else:
+print(f"Wrong: Sample {i+1} -> Features: {sample.values} | True label: {true_label} | Predicted:
+{predicted_label}")
+
+accuracy = accuracy_score(y_test, y_pred) print(f"\nModel Accuracy: {accuracy * 100:.2f}%")
+
+Output:
+
+
+ 
+(C).	Build a decision tree classifier or regressor. Control hyperparameters like tree depth to avoid overfitting. Visualize the tree.
+o	.
+ 
+
+Code:
+import pandas as pd import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, plot_tree from sklearn.datasets import load_iris
+import matplotlib.pyplot as plt
+
+iris = load_iris()
+X = iris.data y = iris.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+clf = DecisionTreeClassifier(max_depth=3, random_state=42) clf.fit(X_train, y_train)
+
+train_accuracy = clf.score(X_train, y_train) test_accuracy = clf.score(X_test, y_test) print(f"Training Accuracy: {train_accuracy}") print(f"Testing Accuracy: {test_accuracy}")
+plt.figure(figsize=(12, 8))
+plot_tree(clf, filled=True, feature_names=iris.feature_names, class_names=iris.target_names) plt.show()
+ 
+Output:
+
+
+ 
+(D).	Implement a Support Vector Machine for any relevant dataset.
+Code:
+# Import necessary libraries import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix from sklearn.datasets import load_iris
+
+iris = load_iris()
+X = iris.data y = iris.target
+
+y_binary = (y == 0).astype(int) # '1' for Setosa, '0' for non-Setosa
+
+X_train, X_test, y_train, y_test = train_test_split(X, y_binary, test_size=0.2, random_state=42)
+
+svm_model = SVC(kernel='linear') # You can change kernel to 'rbf' for non-linear
+
+svm_model.fit(X_train, y_train)
+ 
+y_pred = svm_model.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred) precision = precision_score(y_test, y_pred) recall = recall_score(y_test, y_pred)
+
+print(f"Accuracy: {accuracy:.4f}") print(f"Precision: {precision:.4f}") print(f"Recall: {recall:.4f}")
+
+
+cm = confusion_matrix(y_test, y_pred) print("\nConfusion Matrix:")
+print(cm)
+
+X_train_2d = X_train[:, :2] # First two features (sepal length and sepal width) X_test_2d = X_test[:, :2]
+
+svm_model.fit(X_train_2d, y_train)
+
+x_min, x_max = X_train_2d[:, 0].min() - 1, X_train_2d[:, 0].max() + 1 y_min, y_max = X_train_2d[:, 1].min() - 1, X_train_2d[:, 1].max() + 1 xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
+np.arange(y_min, y_max, 0.1))
+
+Z = svm_model.predict(np.c_[xx.ravel(), yy.ravel()]) Z = Z.reshape(xx.shape)
+
+plt.figure(figsize=(8, 6))
+plt.contourf(xx, yy, Z, alpha=0.75, cmap='coolwarm')
+plt.scatter(X_train_2d[:, 0], X_train_2d[:, 1], c=y_train, edgecolors='k', marker='o', label='Training data')
+plt.scatter(X_test_2d[:, 0], X_test_2d[:, 1], c=y_test, edgecolors='r', marker='x', label='Test data') plt.title('SVM Decision Boundary (Linear Kernel)')
+plt.xlabel('Sepal Length') plt.ylabel('Sepal Width') plt.legend()
+plt.show()
+ 
+
+ 
+
+
+
+
+ 
+Practical 4(e)
+To train a Random Forest ensemble, we can use a sample dataset and compare its performance with that of a single decision tree. Here’s the approach:
+
+Code:
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score from sklearn.datasets import load_iris
+iris = load_iris()
+X = iris.data y = iris.target
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+dt_model = DecisionTreeClassifier(random_state=42) dt_model.fit(X_train, y_train)
+
+y_pred_dt = dt_model.predict(X_test)
+accuracy_dt = accuracy_score(y_test, y_pred_dt)
+precision_dt = precision_score(y_test, y_pred_dt, average='macro') recall_dt = recall_score(y_test, y_pred_dt, average='macro')
+print("Decision Tree Performance:") print(f"Accuracy: {accuracy_dt:.4f}")
+ 
+print(f"Precision: {precision_dt:.4f}") print(f"Recall: {recall_dt:.4f}\n")
+n_estimators_list = [10, 50, 100, 200]
+max_features_list = ['sqrt', 'log2', None] 
+results = []
+for n_estimators in n_estimators_list:
+for max_features in max_features_list:
+rf_model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, random_state=42)
+rf_model.fit(X_train, y_train)
+
+y_pred_rf = rf_model.predict(X_test)
+
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+precision_rf = precision_score(y_test, y_pred_rf, average='macro') recall_rf = recall_score(y_test, y_pred_rf, average='macro')
+results.append({
+'n_estimators': n_estimators, 'max_features': max_features, 'accuracy': accuracy_rf, 'precision': precision_rf, 'recall': recall_rf
+})
+
+# Convert the results to a DataFrame for easier comparison results_df = pd.DataFrame(results)
+
+print("\nRandom Forest Performance with different hyperparameters:") print(results_df)
+plt.figure(figsize=(10, 6))
+plt.plot(results_df['n_estimators'], results_df['accuracy'], label="Random Forest Accuracy", marker='o')
+plt.axhline(y=accuracy_dt, color='r', linestyle='--', label="Decision Tree Accuracy") plt.title('Random Forest vs Decision Tree Accuracy')
+plt.xlabel('Number of Trees in Random Forest') plt.ylabel('Accuracy')
+plt.legend() plt.grid(True) plt.show()
+plt.figure(figsize=(10, 6))
+plt.plot(results_df['n_estimators'], results_df['precision'], label="Random Forest Precision", marker='o', color='b')
+ 
+plt.plot(results_df['n_estimators'], results_df['recall'], label="Random Forest Recall", marker='s', color='g')
+plt.axhline(y=precision_dt, color='r', linestyle='--', label="Decision Tree Precision") plt.axhline(y=recall_dt, color='orange', linestyle='--', label="Decision Tree Recall") plt.title('Random Forest Precision and Recall vs Decision Tree')
+plt.xlabel('Number of Trees in Random Forest') plt.ylabel('Score')
+plt.legend() plt.grid(True) plt.show()
+.
+ 
+Output:
+
+
+
+
+ 
+Practical No. 5
+Generative Models
+a.	Implement and demonstrate the working of a Naive Bayesian classifier using a sample data set build the model to classify a test sample Give the practical for this
+code
+import pandas as pd import numpy as np
+# Step 1: Prepare the data data = {
+'Age': ['<=30', '<=30', '31-40', '31-40', '>40', '>40', '<=30', '>40', '31-40', '<=30'],
+'Income': ['High', 'Low', 'High', 'Low', 'High', 'Low', 'High', 'Low', 'High', 'Low'],
+'Buys Product': ['No', 'Yes', 'Yes', 'No', 'Yes', 'Yes', 'Yes', 'No', 'No', 'Yes']
+}
+ 
+df = pd.DataFrame(data)
+
+df['Age'] = df['Age'].map({'<=30': 0, '31-40': 1, '>40': 2})
+df['Income'] = df['Income'].map({'Low': 0, 'High': 1})
+df['Buys Product'] = df['Buys Product'].map({'No': 0, 'Yes': 1}) # Display the dataset
+print("Dataset:") print(df)
+(P(Buys Product = Yes) and P(Buys Product = No)) prior_yes = df['Buys Product'].sum() / len(df)
+prior_no = 1 - prior_yes
+
+prob_age_given_yes = df[df['Buys Product'] == 1]['Age'].value_counts(normalize=True).to_dict() # For Age given Buys Product = No
+prob_age_given_no = df[df['Buys Product'] == 0]['Age'].value_counts(normalize=True).to_dict() # For Income given Buys Product = Yes
+prob_income_given_yes = df[df['Buys Product'] == 1]['Income'].value_counts(normalize=True).to_dict() # For Income given Buys Product = No prob_income_given_no = df[df['Buys Product'] == 0]['Income'].value_counts(normalize=True).to_dict()
+def naive_bayes_predict(age, income):
+# P(Buys Product = Yes) prob_yes_given_features = prior_yes if age in prob_age_given_yes:
+prob_yes_given_features *= prob_age_given_yes[age] if income in prob_income_given_yes:
+prob_yes_given_features *= prob_income_given_yes[income] # P(Buys Product = No)
+prob_no_given_features = prior_no if age in prob_age_given_no:
+prob_no_given_features *= prob_age_given_no[age] if income in prob_income_given_no:
+prob_no_given_features *= prob_income_given_no[income] # Normalize and compare
+total_prob = prob_yes_given_features + prob_no_given_features prob_yes_given_features /= total_prob
+prob_no_given_features /= total_prob
+return "Yes" if prob_yes_given_features > prob_no_given_features else "No"
+
+test_sample = {'Age': 1, 'Income': 1} # Age = 31-40, Income = High prediction = naive_bayes_predict(test_sample['Age'], test_sample['Income'])
+print("\nPredicted class for the test sample (Age = 31-40, Income = High):", prediction)
+ 
+Output:
+Predicted class for the test sample (Age = 31-40, Income = High): No
+ 
+(B).	Implement hidden markov models using hmmlearn give practical for this
+To implement a Hidden Markov Model (HMM) using the hmmlearn library, let's consider a practical example where we use HMM to model a simple sequence of observations. We'll use a dataset that represents a weather forecasting system, where the weather (hidden states) influences the observations (like whether or not an umbrella is needed).
+In this example:
+
+•	Hidden States: Weather conditions (Sunny, Rainy).
+•	Observations: Whether the person carries an umbrella (1 for yes, 0 for no).
+•	We’ll use the hmmlearn library to train a model that can predict the weather given a sequence of observations.
+Steps to Implement:
+
+1.	Install and Import Necessary Libraries.
+2.	Prepare the Data (Observation and State Sequences).
+3.	Define and Train the HMM.
+4.	Make Predictions with the Model.
+
+Example Dataset (Observation Sequence):
+•	Observations: 1 (Umbrella), 0 (No Umbrella)
+•	States: 0 (Sunny), 1 (Rainy)
+
+Day	Weather (State)	Umbrella (Observation)
+1	Sunny (0)	No Umbrella (0)
+2	Sunny (0)	No Umbrella (0)
+3	Rainy (1)	Umbrella (1)
+4	Rainy (1)	Umbrella (1)
+5	Sunny (0)	No Umbrella (0)
+6	Rainy (1)	Umbrella (1)
+7	Sunny (0)	No Umbrella (0)
+8	Rainy (1)	Umbrella (1)
+Installation:
+pip install hmmlearn
+
+Implementation:
+import numpy as np
+from hmmlearn import hmm 
+observations = np.array([[0], [0], [1], [1], [0], [1], [0], [1]]) 
+model = hmm.MultinomialHMM(n_components=2, n_iter=1000)
+model.fit(observations)
+
+ 
+predicted_states = model.predict(observations)
+
+print("Predicted Hidden States (Weather):") print(predicted_states)
+print("\nTransition Matrix (State to State):")
+print(model.transmat_)
+print("\nEmission Matrix (Observation | State):") print(model.emissionprob_)
+
+new_observations = np.array([[0], [1], [1]]) # No Umbrella, Umbrella, Umbrella predicted_new_states = model.predict(new_observations)
+print("\nPredicted Hidden States for New Observations (No Umbrella, Umbrella, Umbrella):") print(predicted_new_states)
+ 
+Output:
+
+
+ 
+Practical No. 6
+Probabilistic Models
+
+(A).	Implement Bayesian linear regression to explore prior and posterior distribution.
+
+To implement Bayesian Linear Regression and explore prior and posterior distributions, we'll go through a step-by-step practical example using Python. The primary goal here is to implement a linear regression model where we treat the model parameters (weights) probabilistically. In Bayesian linear regression, we model the uncertainty in the parameters, and update our beliefs about them as we observe data.
+
+We'll use numpy, matplotlib, and seaborn for plotting, and scipy.stats for working with distributions.
+
+Steps:
+
+1.	Generate synthetic data.
+2.	Define prior distributions for the weights.
+3.	Compute the posterior distribution using Bayesian formula.
+4.	Plot the prior and posterior distributions.
+5.	Make predictions based on the posterior.
+
+Implementation:
+
+import numpy as np
+import matplotlib.pyplot as plt import seaborn as sns
+from scipy.stats import multivariate_normal np.random.seed(42)
+n_samples = 50
+X = np.linspace(0, 10, n_samples)
+y_true = 2 * X + 1 # y = 2x + 1 (true coefficients) noise = np.random.normal(0, 1, n_samples)
+y = y_true + noise 
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, label="Observed data", color='blue') plt.plot(X, y_true, label="True line", color='red', linewidth=2) plt.xlabel('X')
+plt.ylabel('y')
+plt.title('Synthetic Data and True Line') plt.legend()
+plt.show()
+
+prior_mean = np.array([0, 0]) # [slope, intercept]
+prior_cov = np.array([[10, 0], [0, 10]]) # Uncorrelated, high variance
+
+ 
+X_design = np.vstack([X, np.ones_like(X)]).T
+sigma_squared = 1 # Variance of the Gaussian noise likelihood_cov = sigma_squared * np.identity(n_samples)
+X_transpose = X_design.T
+posterior_cov = np.linalg.inv(np.linalg.inv(prior_cov) + X_transpose @ np.linalg.inv(likelihood_cov) @ X_design)
+posterior_mean = posterior_cov @ (np.linalg.inv(prior_cov) @ prior_mean + X_transpose @ np.linalg.inv(likelihood_cov) @ y)
+
+sns.set(style="whitegrid")
+plt.figure(figsize=(10, 6))
+plt.subplot(1, 2, 1)
+slope_range = np.linspace(-5, 5, 100)
+intercept_range = np.linspace(-5, 5, 100)
+slope_grid, intercept_grid = np.meshgrid(slope_range, intercept_range) prior_pdf = multivariate_normal.pdf(
+np.dstack([slope_grid, intercept_grid]), mean=prior_mean, cov=prior_cov) plt.contour(slope_grid, intercept_grid, prior_pdf, levels=10, cmap='Blues') plt.title('Prior Distribution')
+plt.xlabel('Slope') plt.ylabel('Intercept')
+plt.subplot(1, 2, 2)
+posterior_pdf = multivariate_normal.pdf(
+np.dstack([slope_grid, intercept_grid]), mean=posterior_mean, cov=posterior_cov) plt.contour(slope_grid, intercept_grid, posterior_pdf, levels=10, cmap='Reds') plt.title('Posterior Distribution')
+plt.xlabel('Slope') plt.ylabel('Intercept') plt.tight_layout() plt.show()
+n_samples_posterior = 500
+posterior_samples = np.random.multivariate_normal(posterior_mean, posterior_cov, n_samples_posterior)
+predictions = np.array([X_design @ sample for sample in posterior_samples]) 
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, color='blue', label='Observed data') plt.plot(X, y_true, label='True Line', color='red', linewidth=2)
+plt.plot(X, np.mean(predictions, axis=0), label='Posterior mean prediction', color='green', linewidth=2)
+std_dev = np.std(predictions, axis=0)
+ 
+plt.fill_between(X, np.mean(predictions, axis=0) - 1.96 * std_dev, np.mean(predictions, axis=0) +
+1.96 * std_dev, color='green', alpha=0.2, label='95% prediction interval') plt.xlabel('X')
+plt.ylabel('y')
+plt.title('Posterior Predictions with Uncertainty') plt.legend()
+plt.show()

@@ -1,0 +1,327 @@
+Practical No. 7
+Model Evaluation and Hyperparameter Tuning
+(A).	Implement cross-validation techniques (k-fold, stratified, etc.) for robust model evaluation
+from sklearn.datasets import load_iris
+from sklearn.model_selection import cross_val_score, KFold, StratifiedKFold from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import make_scorer, accuracy_score, f1_score 
+data = load_iris()
+X, y = data.data, data.target
+model = DecisionTreeClassifier(random_state=42)
+
+k = 5 # Number of folds
+kfold = KFold(n_splits=k, shuffle=True, random_state=42)
+
+kfold_scores = cross_val_score(model, X, y, cv=kfold, scoring='accuracy') print(f"k-Fold Cross-Validation Accuracy: {kfold_scores}")
+print(f"Mean Accuracy (k-Fold): {kfold_scores.mean():.2f}")
+
+stratified_kfold = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+
+stratified_scores = cross_val_score(model, X, y, cv=stratified_kfold, scoring='accuracy') print(f"Stratified k-Fold Cross-Validation Accuracy: {stratified_scores}")
+print(f"Mean Accuracy (Stratified k-Fold): {stratified_scores.mean():.2f}")
+
+f1_scorer = make_scorer(f1_score, average='weighted')
+ 
+f1_scores = cross_val_score(model, X, y, cv=stratified_kfold, scoring=f1_scorer) print(f"Stratified k-Fold Cross-Validation F1-Score: {f1_scores}")
+print(f"Mean F1-Score (Stratified k-Fold): {f1_scores.mean():.2f}")
+
+
+Output :
+
+ 
+(B).	Systematically explore combinations of hyperparameters to optimize model performance. (use grid and randomized search)
+
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+
+data = load_iris()
+X, y = data.data, data.target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+model = RandomForestClassifier(random_state=42)
+
+param_grid = {
+'n_estimators': [10, 50, 100, 200],
+'max_depth': [None, 10, 20, 30],
+'min_samples_split': [2, 5, 10],
+'min_samples_leaf': [1, 2, 4]
+}
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='accuracy', verbose=1)
+grid_search.fit(X_train, y_train)
+print("Best Parameters (Grid Search):", grid_search.best_params_) print("Best Accuracy (Grid Search):", grid_search.best_score_)
+param_dist = {
+'n_estimators': [int(x) for x in np.linspace(10, 200, num=20)], 'max_depth': [None] + [int(x) for x in np.linspace(10, 30, num=5)], 'min_samples_split': [2, 5, 10],
+'min_samples_leaf': [1, 2, 4], 'bootstrap': [True, False]
+}
+
+ 
+random_search = RandomizedSearchCV(estimator=model, param_distributions=param_dist, n_iter=50,
+cv=5, scoring='accuracy', random_state=42, verbose=1) random_search.fit(X_train, y_train)
+
+print("Best Parameters (Randomized Search):", random_search.best_params_) print("Best Accuracy (Randomized Search):", random_search.best_score_)
+best_model = random_search.best_estimator_ y_pred = best_model.predict(X_test)
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+
+Output
+
+.
+ 
+ 
+Practical No. 8
+Bayesian Learning
+(A).	Implement Bayesian learning using inferences
+To implement Bayesian learning using inferences, we will work through a practical example of Bayesian inference in the context of a linear regression model. The goal is to explore how we can update our beliefs (posterior) about the model's parameters (weights) based on observed data (evidence) using Bayesian inference.
+
+Code:
+
+import numpy as np
+import matplotlib.pyplot as plt import seaborn as sns
+from scipy.stats import multivariate_normal np.random.seed(42)
+n_samples = 50
+X = np.linspace(0, 10, n_samples)
+y_true = 2 * X + 1 # y = 2x + 1 (true coefficients) noise = np.random.normal(0, 1, n_samples)
+y = y_true + noise # observed data with noise
+ 
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, label="Observed data", color='blue') plt.plot(X, y_true, label="True line", color='red', linewidth=2) plt.xlabel('X')
+plt.ylabel('y')
+plt.title('Synthetic Data and True Line') plt.legend()
+plt.show()
+prior_mean = np.array([0, 0]) # [slope, intercept]
+prior_cov = np.array([[10, 0], [0, 10]]) # Uncorrelated, high variance 
+X_design = np.vstack([X, np.ones_like(X)]).T
+sigma_squared = 1 # Variance of the Gaussian noise likelihood_cov = sigma_squared * np.identity(n_samples)
+X_transpose = X_design.T
+posterior_cov = np.linalg.inv(np.linalg.inv(prior_cov) + X_transpose @ np.linalg.inv(likelihood_cov) @ X_design)
+posterior_mean = posterior_cov @ (np.linalg.inv(prior_cov) @ prior_mean + X_transpose @ np.linalg.inv(likelihood_cov) @ y)
+sns.set(style="whitegrid")
+plt.figure(figsize=(10, 6))
+plt.subplot(1, 2, 1)
+slope_range = np.linspace(-5, 5, 100)
+intercept_range = np.linspace(-5, 5, 100)
+slope_grid, intercept_grid = np.meshgrid(slope_range, intercept_range) prior_pdf = multivariate_normal.pdf(
+np.dstack([slope_grid, intercept_grid]), mean=prior_mean, cov=prior_cov)
+
+plt.contour(slope_grid, intercept_grid, prior_pdf, levels=10, cmap='Blues') plt.title('Prior Distribution')
+plt.xlabel('Slope') plt.ylabel('Intercept')
+plt.subplot(1, 2, 2)
+posterior_pdf = multivariate_normal.pdf(
+np.dstack([slope_grid, intercept_grid]), mean=posterior_mean, cov=posterior_cov) plt.contour(slope_grid, intercept_grid, posterior_pdf, levels=10, cmap='Reds') plt.title('Posterior Distribution')
+plt.xlabel('Slope') plt.ylabel('Intercept') plt.tight_layout()
+ 
+plt.show()
+n_samples_posterior = 500
+posterior_samples = np.random.multivariate_normal(posterior_mean, posterior_cov, n_samples_posterior)
+predictions = np.array([X_design @ sample for sample in posterior_samples]) 
+plt.figure(figsize=(8, 6))
+plt.scatter(X, y, color='blue', label='Observed data') plt.plot(X, y_true, label='True Line', color='red', linewidth=2)
+plt.plot(X, np.mean(predictions, axis=0), label='Posterior mean prediction', color='green', linewidth=2)
+std_dev = np.std(predictions, axis=0)
+plt.fill_between(X, np.mean(predictions, axis=0) - 1.96 * std_dev, np.mean(predictions, axis=0) +
+1.96 * std_dev, color='green', alpha=0.2, label='95% prediction interval') plt.xlabel('X')
+plt.ylabel('y')
+plt.title('Posterior Predictions with Uncertainty') plt.legend()
+plt.show()
+
+Output:
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+Practical No. 9
+Deep Generative Models
+
+(A).	Set up a generator network to produce samples and a discriminator network to distinguish between real and generated data. (Use a simple small dataset)
+
+Code:
+
+import torch
+import torch.nn as nn import torch.optim as optim import numpy as np
+import matplotlib.pyplot as plt
+torch.manual_seed(42)
+
+def generate_real_data(n_samples):
+mean = [2, 3]
+cov = [[1, 0.5], [0.5, 1]]
+real_data = np.random.multivariate_normal(mean, cov, n_samples) return torch.FloatTensor(real_data)
+
+class Generator(nn.Module):
+ 
+def  init (self, input_dim, output_dim): super(Generator, self). init () self.model = nn.Sequential(
+nn.Linear(input_dim, 16), nn.ReLU(),
+nn.Linear(16, 32), nn.ReLU(),
+nn.Linear(32, output_dim)
+)
+
+def forward(self, x): return self.model(x)
+
+class Discriminator(nn.Module): def   init  (self, input_dim):
+super(Discriminator, self). init () self.model = nn.Sequential(
+nn.Linear(input_dim, 32), nn.ReLU(),
+nn.Linear(32, 16), nn.ReLU(),
+nn.Linear(16, 1), nn.Sigmoid()
+)
+
+def forward(self, x): return self.model(x)
+
+n_samples = 1000
+input_dim = 10
+output_dim = 2
+n_epochs = 2000
+batch_size = 32
+
+generator = Generator(input_dim, output_dim) discriminator = Discriminator(output_dim)
+
+g_optimizer = optim.Adam(generator.parameters(), lr=0.001) d_optimizer = optim.Adam(discriminator.parameters(), lr=0.001)
+criterion = nn.BCELoss() 
+for epoch in range(n_epochs): # Train Discriminator
+real_data = generate_real_data(batch_size) noise = torch.randn(batch_size, input_dim)
+ 
+fake_data = generator(noise).detach() d_optimizer.zero_grad()
+real_labels = torch.ones(batch_size, 1) real_output = discriminator(real_data) d_loss_real = criterion(real_output, real_labels)
+
+fake_labels = torch.zeros(batch_size, 1) fake_output = discriminator(fake_data) d_loss_fake = criterion(fake_output, fake_labels)
+
+d_loss = d_loss_real + d_loss_fake d_loss.backward() d_optimizer.step()
+noise = torch.randn(batch_size, input_dim) fake_data = generator(noise)
+g_optimizer.zero_grad()
+output = discriminator(fake_data) g_loss = criterion(output, real_labels)
+
+g_loss.backward() g_optimizer.step()
+
+if (epoch + 1) % 200 == 0:
+print(f'Epoch [{epoch+1}/{n_epochs}], d_loss: {d_loss.item():.4f}, g_loss:
+{g_loss.item():.4f}')
+
+def plot_distributions():
+real_data = generate_real_data(500) noise = torch.randn(500, input_dim) fake_data = generator(noise).detach()
+
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+plt.scatter(real_data[:, 0], real_data[:, 1], c='blue', alpha=0.5, label='Real Data') plt.title('Real Data Distribution')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+ 
+plt.scatter(fake_data[:, 0], fake_data[:, 1], c='red', alpha=0.5, label='Generated Data') plt.title('Generated Data Distribution')
+plt.legend()
+plt.tight_layout() plt.show()
+plot_distributions()
+
+Output:
+
+ 
+
+ 
+
+
+ 
+Practical No. 10
+Develop an API to deploy your model and perform predictions
+Code:
+
+# Import necessary libraries import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score import joblib
+import matplotlib.pyplot as plt import seaborn as sns
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+df = pd.DataFrame(data=iris.data, columns=iris.feature_names) df['target'] = iris.target
+print(df.head())
+print(df.info())
+X = df.drop(columns=['target'])
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) 
+model = RandomForestClassifier(n_estimators=100, random_state=42) 
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+print("Accuracy Score: ", accuracy_score(y_test, y_pred)) print("Classification Report:\n", classification_report(y_test, y_pred))
+joblib.dump(model, 'trained_model.joblib')
+ 
+features = X.columns
+importances = model.feature_importances_ indices = np.argsort(importances)
+
+.figure(figsize=(10, 6)) plt.title("Feature Importances")
+plt.barh(range(X.shape[1]), importances[indices], align="center") plt.yticks plt (range(X.shape[1]), features[indices]) plt.xlabel("Relative Importance")
+plt.show()
+
+print("Model saved as 'trained_model.joblib'")
+
+
+Create a file called main.py:
+# main.py
+
+Code:
+import joblib
+from fastapi import FastAPI from pydantic import BaseModel
+from sklearn.datasets import load_iris import pandas as pd
+
+model = joblib.load('trained_model.joblib')
+class FlowerInput(BaseModel):
+sepal_length: float sepal_width: float petal_length: float petal_width: float
+app = FastAPI()
+def predict_species(sepal_length, sepal_width, petal_length, petal_width): # Prepare the input data as a DataFrame
+input_data = pd.DataFrame([[sepal_length, sepal_width, petal_length, petal_width]], columns=['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal
+width (cm)'])
+
+prediction = model.predict(input_data)
+iris = load_iris()
+species = iris.target_names[prediction] return species[0]
+ 
+
+@app.post("/predict/")
+async def predict(flowers: FlowerInput): 
+predicted_species = predict_species(flowers.sepal_length, flowers.sepal_width, flowers.petal_length, flowers.petal_width)
+return {"predicted_species": predicted_species}
+Step 3: Run the API
+
+$headers = @{
+"accept" = "application/json" "Content-Type" = "application/json"
+}
+$data = '{"sepal_length": 9, "sepal_width": 9, "petal_length": 0, "petal_width": 9}'
+
+Invoke-WebRequest -Uri "http://127.0.0.1:8000/predict/" -Method Post -Headers $headers -Body
+$data
+
+The API will return a response with the predicted species. The response will look like:
+{
+"predicted_species": "setosa"
+}
+This confirms that the API is working, and the model is making predictions based on the input features.
+First, create a requirements.txt file for your project dependencies.
+requirements.txt Copy code fastapi==0.95.1 uvicorn==0.23.1 scikit-learn==1.2.0 pandas==1.5.3 joblib==1.2.0 numpy==1.23.5 matplotlib==3.6.3 seaborn==0.12.2
